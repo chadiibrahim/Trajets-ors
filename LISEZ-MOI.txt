@@ -1,0 +1,55 @@
+AGENDA TRAJETS - VERSION OPENROUTESERVICE (installable, fonctionne hors ligne)
+Agenda de rendez-vous avec suivi des kilomètres. Français / English.
+Cette version n'utilise pas Google : recherche de lieux et distances via OpenRouteService (HeiGIT),
+carte via OpenStreetMap. Gratuit, sans carte bancaire.
+
+1) HÉBERGER LES FICHIERS (une seule fois)
+   Ce dossier contient uniquement l'application, aucune donnée.
+   - GitHub : créez un dépôt, Add file > Upload files, glissez LE CONTENU de ce dossier
+     (y compris le dossier "vendor"), Commit changes.
+   - Settings > Pages > Deploy from a branch > main / (root). Adresse : https://VOTRE-NOM.github.io/NOM-DU-DEPOT/
+   Android (Chrome) : menu ⋮ > "Installer l'application".  iPhone (Safari) : Partager > "Sur l'écran d'accueil".
+   Au premier lancement : choisissez un code PIN (4 à 8 chiffres).
+   Cette version a ses propres données : elle ne lit pas celles de la version Google, même sur le même domaine.
+   Pour reprendre vos données : Réglages > Sauvegarde dans l'ancienne version, puis "Restaurer une sauvegarde" ici.
+
+2) CRÉER VOTRE CLÉ OPENROUTESERVICE (une seule fois, gratuit)
+   a. Allez sur account.heigit.org et créez un compte (e-mail), puis connectez-vous.
+   b. Créez un jeton / une clé API (plan gratuit "Standard"). Copiez-la.
+   c. Dans l'app : Réglages > Clé OpenRouteService > collez la clé > "Tester la clé".
+      Les 3 lignes doivent afficher ✅. Une ligne ❌ affiche la cause (clé refusée, quota, blocage du navigateur).
+   Important :
+   - L'ancienne adresse api.openrouteservice.org est arrêtée début novembre 2026. L'app utilise la nouvelle,
+     api.heigit.org. Une clé existante fonctionne aussi sur la nouvelle adresse.
+   - Contrairement à Google, la clé ne peut pas être limitée à votre site. Gardez-la privée : elle reste sur votre
+     téléphone et n'est jamais dans les fichiers hébergés ni dans les sauvegardes. Si elle fuit, régénérez-la.
+   - Les quotas gratuits sont affichés dans votre compte. Auparavant : environ 2 000 calculs de distance et
+     1 000 recherches de lieux par jour. Chaque trajet entre deux mêmes lieux n'est calculé qu'une fois, et la
+     recherche de lieux attend que vous ayez tapé 3 lettres.
+
+3) UTILISATION
+   Lieux       : ajoutez vos lieux (recherche, point sur la carte, lien Google Maps long ou coordonnées
+                 "33.89, 35.50"). Définissez votre domicile. Les liens courts maps.app.goo.gl ne sont pas lisibles.
+   Agenda      : "+" pour un RDV (date, début, fin, départ, arrivée). La distance (route en voiture) est calculée
+                 automatiquement et peut être corrigée à la main. "Terminer" met à jour l'heure de fin réelle.
+                 Un seul retour à la maison par jour, depuis la dernière arrivée ; il se modifie ou se désactive.
+   Parcours    : km par jour, semaine, mois, année ou période libre, avec coût (km x montant par km),
+                 export Excel et PDF.
+   Hors ligne  : l'agenda et les lieux fonctionnent sans internet (la carte et la recherche demandent internet).
+                 Une distance non calculée est reprise dès que la connexion revient (ou bouton "Calculer").
+   Qualité     : OpenStreetMap connaît bien les villes et grandes routes, moins les commerces et numéros de rue.
+                 Vérifiez vos lieux habituels, et corrigez les coordonnées ou la distance à la main si besoin.
+
+4) VOS DONNÉES
+   Stockées uniquement dans le navigateur de CE téléphone. Perdues si vous videz les données du site
+   ou désinstallez l'application. Le code PIN verrouille l'application ; les données du navigateur ne sont pas
+   chiffrées sur le téléphone.
+   Réglages > Sauvegarde : fichier partageable (WhatsApp, Drive, e-mail...), chiffrement AES par mot de passe
+   en option (sans lui, la sauvegarde est illisible), rappel hebdomadaire/mensuel.
+   La clé et le PIN ne sont jamais inclus dans la sauvegarde.
+
+5) MISE À JOUR
+   Remplacez les fichiers sur GitHub, puis rouvrez l'application deux fois (la 2e ouverture charge la
+   nouvelle version). Les données sont conservées.
+
+Crédits : données © contributeurs OpenStreetMap ; services OpenRouteService / HeiGIT ; carte Leaflet (licence BSD-2, vendor/LEAFLET-LICENSE.txt).

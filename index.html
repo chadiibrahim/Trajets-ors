@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2b7a74">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trajets">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="style.css">
+<title>Agenda Trajets</title>
+</head>
+<body>
+<div id="app">
+  <div id="lock" class="lock hidden" role="dialog" aria-modal="true"></div>
+  <header id="topbar" class="topbar hidden">
+    <h1 id="topTitle">Agenda Trajets</h1>
+    <button id="btnLock" class="icon-btn" aria-label="Lock">🔒</button>
+  </header>
+  <main id="view" class="view hidden"></main>
+  <nav id="tabs" class="tabs hidden">
+    <button data-tab="agenda"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span data-i="tabAgenda"></span></button>
+    <button data-tab="places"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span data-i="tabPlaces"></span></button>
+    <button data-tab="routes"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg><span data-i="tabRoutes"></span></button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span data-i="tabSettings"></span></button>
+  </nav>
+  <div id="modals"></div>
+  <div id="toast" class="toast hidden" role="status"></div>
+</div>
+<script src="vendor/leaflet.js"></script>
+<script src="i18n.js"></script>
+<script src="export.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
