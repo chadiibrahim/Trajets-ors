@@ -395,7 +395,7 @@ function openMapPicker(start, onPick) {
   let map = null; const prevClose = sh.close; sh.close = function () { if (map) { map.remove(); map = null; } prevClose.call(sh); };
   $('[data-x]', sh.el).onclick = () => sh.close();
   try {
-    if (!window.L) throw new Error('leaflet');
+    if (!window.L) { sh.$('.sh-body').innerHTML = `<div class="banner">${esc(t('mapLibMissing'))}</div>`; return; }
     map = L.map(sh.$('#mp-map'), { center: [pt.lat, pt.lng], zoom: start ? 16 : 12, zoomControl: true, attributionControl: true });
     window.__map = map;
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(map);

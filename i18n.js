@@ -43,7 +43,7 @@ const I18N = {
     placeUsed: 'Ce lieu est utilisé par {n} RDV. Le supprimer quand même ? Les RDV garderont leur distance.',
     confirmDeletePlace: 'Supprimer ce lieu ?', filterPlaces: 'Filtrer les lieux…', noResults: 'Aucun résultat.',
     mapPickTitle: 'Choisir sur la carte', mapPickHint: 'Touchez la carte pour placer le repère.', useThisPoint: 'Utiliser ce point',
-    mapLoadFail: 'Impossible d\'afficher la carte. Vérifiez la connexion.',
+    mapLoadFail: 'Impossible d\'afficher la carte. Vérifiez la connexion.', mapLibMissing: 'La bibliothèque de carte est introuvable (fichier leaflet.js). Téléversez aussi ce fichier sur GitHub, puis rouvrez l\'application deux fois.',
     needInternet: 'Connexion internet nécessaire.', linkNotResolved: 'Ce lien court ne peut pas être lu ici. Ouvrez-le, copiez les coordonnées ou recherchez l\'adresse.',
     coordsRead: 'Coordonnées lues : {c}', searching: 'Recherche…',
     // Routes
@@ -122,7 +122,7 @@ const I18N = {
     placeUsed: 'This place is used by {n} appointments. Delete anyway? Appointments keep their distance.',
     confirmDeletePlace: 'Delete this place?', filterPlaces: 'Filter places…', noResults: 'No results.',
     mapPickTitle: 'Pick on map', mapPickHint: 'Tap the map to place the pin.', useThisPoint: 'Use this point',
-    mapLoadFail: 'Could not display the map. Check your connection.',
+    mapLoadFail: 'Could not display the map. Check your connection.', mapLibMissing: 'The map library is missing (file leaflet.js). Upload this file to GitHub too, then reopen the app twice.',
     needInternet: 'Internet connection required.', linkNotResolved: 'This short link cannot be read here. Open it, copy the coordinates or search the address.',
     coordsRead: 'Coordinates read: {c}', searching: 'Searching…',
     routesTitle: 'Mileage', pDay: 'Day', pWeek: 'Week', pMonth: 'Month', pYear: 'Year', pRange: 'Range',

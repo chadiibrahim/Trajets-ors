@@ -5,8 +5,9 @@ carte via OpenStreetMap. Gratuit, sans carte bancaire.
 
 1) HÉBERGER LES FICHIERS (une seule fois)
    Ce dossier contient uniquement l'application, aucune donnée.
-   - GitHub : créez un dépôt, Add file > Upload files, glissez LE CONTENU de ce dossier
-     (y compris le dossier "vendor"), Commit changes.
+   - GitHub : créez un dépôt, Add file > Upload files, glissez TOUS LES FICHIERS du dossier dézippé
+     (il n'y a aucun sous-dossier), attendez la fin du chargement, puis Commit changes.
+     Il y a 17 fichiers environ ; vérifiez qu'ils apparaissent tous dans le dépôt, dont leaflet.js et les icônes .png.
    - Settings > Pages > Deploy from a branch > main / (root). Adresse : https://VOTRE-NOM.github.io/NOM-DU-DEPOT/
    Android (Chrome) : menu ⋮ > "Installer l'application".  iPhone (Safari) : Partager > "Sur l'écran d'accueil".
    Au premier lancement : choisissez un code PIN (4 à 8 chiffres).
@@ -52,4 +53,4 @@ carte via OpenStreetMap. Gratuit, sans carte bancaire.
    Remplacez les fichiers sur GitHub, puis rouvrez l'application deux fois (la 2e ouverture charge la
    nouvelle version). Les données sont conservées.
 
-Crédits : données © contributeurs OpenStreetMap ; services OpenRouteService / HeiGIT ; carte Leaflet (licence BSD-2, vendor/LEAFLET-LICENSE.txt).
+Crédits : données © contributeurs OpenStreetMap ; services OpenRouteService / HeiGIT ; carte Leaflet (licence BSD-2, LEAFLET-LICENSE.txt).
