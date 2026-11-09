@@ -1,12 +1,12 @@
 'use strict';
 /* Agenda Trajets - core: data, helpers, Google APIs, trips, PIN */
-const VERSION = '1.1.0-ors';
+const VERSION = '1.2.0-ors';
 const LS_DATA = 'ators_data', LS_PIN = 'ators_pin', LS_META = 'ators_meta'; /* own keys: never mixes with the Google version hosted on the same domain */
 
 /* ---------- data ---------- */
 function defaultLang() { return (navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en'; }
 function defaultDB() {
-  return { v: 1, places: [], appts: [], days: {}, routes: {},
+  return { v: 1, places: [], appts: [], days: {}, routes: {}, durs: {},
     settings: { lang: defaultLang(), homeId: null, autoReturn: true, rate: 0, currency: '$', apiKey: '', region: 'lb',
       lockMin: 1, backupFreq: 'never', lastBackup: null } };
 }
@@ -100,13 +100,15 @@ async function placesAutocomplete(input) {
   acCache.set(ck, out);
   return out;
 }
-async function computeRoute(a, b) {
+async function computeRouteFull(a, b) {
   const j = await orsGet('Directions', '/openrouteservice/v2/directions/driving-car', { start: a.lng + ',' + a.lat, end: b.lng + ',' + b.lat });
   const f = j.features && j.features[0], r = j.routes && j.routes[0];
-  const m = f ? f.properties && f.properties.summary && f.properties.summary.distance : r && r.summary && r.summary.distance;
+  const sum = f ? f.properties && f.properties.summary : r && r.summary;
+  const m = sum && sum.distance;
   if (typeof m !== 'number') throw new ApiError('noroute');
-  return round1(m / 1000);
+  return { km: round1(m / 1000), min: typeof sum.duration === 'number' ? Math.max(1, Math.round(sum.duration / 60)) : -1 };
 }
+async function computeRoute(a, b) { return (await computeRouteFull(a, b)).km; }
 async function reverseGeocode(lat, lng) {
   const j = await orsGet('Geocoding', '/pelias/v1/reverse', { 'point.lat': lat, 'point.lon': lng, size: 1 });
   const f = j.features && j.features[0];
@@ -143,9 +145,16 @@ async function routeKm(fromId, toId, force) {
   if (!a || !b || !hasCoords(a) || !hasCoords(b)) return null;
   const key = fromId + '>' + toId;
   if (!force && DB.routes[key] != null) return DB.routes[key];
-  const km = await computeRoute(a, b);
-  DB.routes[key] = km; saveDB();
-  return km;
+  const r = await computeRouteFull(a, b);
+  DB.routes[key] = r.km; DB.durs[key] = r.min; saveDB();
+  return r.km;
+}
+/* Estimated driving time in minutes for a cached pair, or null when unknown. */
+function routeMin(fromId, toId) {
+  if (!fromId || !toId) return null;
+  if (fromId === toId) return 0;
+  const v = DB.durs[fromId + '>' + toId];
+  return typeof v === 'number' && v >= 0 ? v : null;
 }
 function cachedKm(fromId, toId) {
   if (!fromId || !toId) return null;
@@ -154,14 +163,20 @@ function cachedKm(fromId, toId) {
   return v == null ? null : v;
 }
 function invalidateRoutes(placeId) {
-  Object.keys(DB.routes).forEach(k => { const [a, b] = k.split('>'); if (a === placeId || b === placeId) delete DB.routes[k]; });
+  Object.keys(DB.routes).forEach(k => { const [a, b] = k.split('>'); if (a === placeId || b === placeId) { delete DB.routes[k]; delete DB.durs[k]; } });
   DB.appts.forEach(a => { if (!a.kmManual && (a.fromId === placeId || a.toId === placeId)) a.km = null; });
   Object.values(DB.days).forEach(d => { if (!d.kmManual) d.km = null; });
 }
 const apptSort = (a, b) => (a.date + a.start + a.end).localeCompare(b.date + b.start + b.end);
 function apptsOn(date, includeCancelled) { return DB.appts.filter(a => a.date === date && (includeCancelled || a.status !== 'cancelled')).sort(apptSort); }
 function placeName(id, snap) { const p = place(id); return p ? p.name : (snap || '?'); }
-/* Single return-home trip for a day (derived). null when no return applies. */
+/* Default end of the return trip: start + estimated driving time (30 min when unknown), never past 23:59. */
+function returnDefaultEnd(start, fromId, homeId) {
+  const d = routeMin(fromId, homeId);
+  return fromMin(Math.min(toMin(start) + Math.max(d != null ? d : 30, 1), 23 * 60 + 59));
+}
+/* Single return-home trip for a day. It behaves like an appointment: start, end, status, edit, finish, directions.
+   Start follows the end of the last appointment and end follows the estimated driving time, until the user sets them. */
 function returnTrip(date, list) {
   if (!S().autoReturn) return null;
   list = list || apptsOn(date);
@@ -175,7 +190,10 @@ function returnTrip(date, list) {
   const fromId = day.fromId && place(day.fromId) ? day.fromId : last.toId;
   const manual = !!day.kmManual && day.km != null;
   const km = manual ? day.km : cachedKm(fromId, home.id);
-  return { date, kind: 'return', fromId, fromName: placeName(fromId, last.toName), toId: home.id, toName: home.name, km, manual, start: last.end, end: last.end, auto: !day.fromId };
+  const start = day.start || last.end;
+  const end = day.end && day.end > start ? day.end : returnDefaultEnd(start, fromId, home.id);
+  return { date, kind: 'return', fromId, fromName: placeName(fromId, last.toName), toId: home.id, toName: home.name, km, manual, start, end,
+    status: day.status === 'done' ? 'done' : 'planned', plannedEnd: day.plannedEnd || null, auto: !day.fromId };
 }
 /* All counted trips between two dates (inclusive), sorted. */
 function tripsInRange(from, to) {
@@ -196,6 +214,7 @@ function missingKmCount() {
   return tripsInRange(rangeFrom, rangeTo).filter(x => x.km == null).length;
 }
 let pendingRunning = false;
+const durTried = new Set();
 async function ensurePending(onDone) {
   if (pendingRunning || !S().apiKey || !navigator.onLine) return;
   pendingRunning = true; let changed = false;
@@ -209,6 +228,10 @@ async function ensurePending(onDone) {
     for (const d of dates) {
       const r = returnTrip(d);
       if (r && r.kind === 'return' && r.km == null) { const k = await routeKm(r.fromId, r.toId); if (k != null) changed = true; }
+      else if (r && r.kind === 'return' && !r.manual && r.km != null && r.fromId !== r.toId && routeMin(r.fromId, r.toId) == null) {
+        const key = r.fromId + '>' + r.toId;
+        if (!durTried.has(key) && hasCoords(place(r.fromId)) && hasCoords(place(r.toId))) { durTried.add(key); await routeKm(r.fromId, r.toId, true); changed = true; }
+      }
     }
   } catch (e) { /* stop silently: key/net/quota issues are shown when the user acts */ }
   pendingRunning = false;

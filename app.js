@@ -162,9 +162,16 @@ function returnCard(r) {
   if (!r) return '';
   if (r.needsHome) return `<div class="card ret"><div class="muted">🏠 ${esc(t('returnNoHome'))}</div><div class="actions"><button class="btn small sec" data-act="gosettings">${esc(t('tabSettings'))}</button></div></div>`;
   if (r.off) return `<div class="card ret"><div class="row"><div class="grow muted">🏠 ${esc(t('returnOff'))}</div><button class="btn small sec" data-act="returnrestore">${esc(t('returnRestore'))}</button></div></div>`;
-  return `<div class="card ret"><div class="row"><div class="grow"><b>🏠 ${esc(t('returnHome'))}</b><div class="route">${esc(r.fromName)} → ${esc(r.toName)}</div></div>
-    <span class="km">${r.km == null ? `<span class="badge warn">${esc(t('distanceUnknown'))}</span>` : fmtKm(r.km) + ' km'}</span></div>
-    <div class="actions"><button class="btn small sec" data-act="returnedit">${esc(t('returnEdit'))}</button></div></div>`;
+  const dur = toMin(r.end) - toMin(r.start), fromP = place(r.fromId), toP = place(r.toId);
+  const badge = r.status === 'done' ? `<span class="badge done">${esc(t('done'))}</span>` : `<span class="badge">${esc(t('planned'))}</span>`;
+  return `<div class="card ret" data-date="${r.date}">
+    <div class="row"><div class="grow"><div class="time">${r.start} – ${r.end} <span class="muted">· ${esc(fmtDur(dur))}</span></div><div>🏠 ${esc(t('returnHome'))}</div></div>${badge}</div>
+    <div class="route">${esc(r.fromName)} → ${esc(r.toName)}</div>
+    <div class="row" style="margin-top:4px"><span class="km">${r.km == null ? `<span class="badge warn">${esc(t('distanceUnknown'))}</span>` : fmtKm(r.km) + ' km'}</span></div>
+    <div class="actions">${r.status === 'planned' ? `<button class="btn small" data-act="rfinish">${esc(t('finish'))}</button>` : ''}
+      <button class="btn small sec" data-act="returnedit">${esc(t('edit'))}</button>
+      ${fromP && toP ? `<a class="btn small ghost" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(mapsDirUrl(fromP, toP))}">${esc(t('route'))}</a>` : ''}
+      <button class="btn small ghost" data-act="returncancel">${esc(t('cancelReturn'))}</button></div></div>`;
 }
 function viewAgenda() {
   const date = UI.date, all = apptsOn(date, true), act = all.filter(a => a.status !== 'cancelled'), ret = returnTrip(date, act);
@@ -250,61 +257,84 @@ function deleteAppt(id) {
   if (!DB.appts.some(x => x.date === a.date && x.status !== 'cancelled')) delete DB.days[a.date];
   saveDB(); render(); toast(t('deleted'));
 }
-function openFinish(id) {
-  const a = DB.appts.find(x => x.id === id); if (!a) return;
+function finishDialog(o) {
   const now = new Date(), nowHm = pad(now.getHours()) + ':' + pad(now.getMinutes());
-  const initial = a.date === todayStr() && nowHm > a.start ? nowHm : a.end;
-  const sh = openSheet({ title: t('finishTitle'), body: `<div class="muted">${esc(a.start)} – ${esc(a.end)} · ${esc(placeName(a.fromId, a.fromName))} → ${esc(placeName(a.toId, a.toName))}</div>
-    <div class="muted">${esc(t('plannedEnd', { t: a.plannedEnd || a.end }))}</div>
+  const initial = o.date === todayStr() && nowHm > o.start ? nowHm : o.end;
+  const sh = openSheet({ title: t('finishTitle'), body: `<div class="muted">${esc(o.line)}</div>
+    <div class="muted">${esc(t('plannedEnd', { t: o.plannedEnd }))}</div>
     <label class="f">${esc(t('realEnd'))}</label><input id="fin-end" type="time" value="${initial}">
     <div class="row wrap" style="margin-top:8px"><button class="btn sec small" data-q="now">${esc(t('finishNow'))}</button><button class="btn sec small" data-q="15">${esc(t('plus15'))}</button><button class="btn sec small" data-q="30">${esc(t('plus30'))}</button><button class="btn sec small" data-q="60">${esc(t('plus60'))}</button></div>`,
     foot: [{ label: t('cancel'), cls: 'ghost', onClick: s => s.close() }, { label: t('markDone'), id: 'fin-save', onClick: s => {
       const end = s.$('#fin-end').value;
-      if (!end || end <= a.start) return toast(t('endBeforeStart'), true);
-      if (!a.plannedEnd) a.plannedEnd = a.end;
-      a.end = end; a.status = 'done'; if (saveDB()) { s.close(); render(); }
+      if (!end || end <= o.start) return toast(t('endBeforeStart'), true);
+      if (o.onSave(end)) { s.close(); render(); }
     } }] });
   sh.$$('[data-q]').forEach(b => b.onclick = () => {
     const inp = sh.$('#fin-end');
     if (b.dataset.q === 'now') { const d = new Date(); inp.value = pad(d.getHours()) + ':' + pad(d.getMinutes()); }
-    else inp.value = fromMin(Math.min(toMin(inp.value || a.end) + Number(b.dataset.q), 23 * 60 + 59));
+    else inp.value = fromMin(Math.min(toMin(inp.value || o.end) + Number(b.dataset.q), 23 * 60 + 59));
   });
+}
+function openFinish(id) {
+  const a = DB.appts.find(x => x.id === id); if (!a) return;
+  finishDialog({ date: a.date, start: a.start, end: a.end, plannedEnd: a.plannedEnd || a.end,
+    line: `${a.start} – ${a.end} · ${placeName(a.fromId, a.fromName)} → ${placeName(a.toId, a.toName)}`,
+    onSave: end => { if (!a.plannedEnd) a.plannedEnd = a.end; a.end = end; a.status = 'done'; return saveDB(); } });
+}
+function openFinishReturn(date) {
+  const r = returnTrip(date); if (!r || r.kind !== 'return') return;
+  finishDialog({ date, start: r.start, end: r.end, plannedEnd: r.plannedEnd || r.end, line: `${r.start} – ${r.end} · ${r.fromName} → ${r.toName}`,
+    onSave: end => { const d = DB.days[date] = DB.days[date] || {}; if (!d.plannedEnd) d.plannedEnd = r.end; d.end = end; d.status = 'done'; return saveDB(); } });
 }
 function openReturnEdit(date) {
   const r = returnTrip(date); if (!r || r.needsHome) return;
   const day = DB.days[date] || {};
-  let kmManual = !!day.kmManual, tok = 0;
+  let kmManual = !!day.kmManual, tok = 0, endTouched = !!day.end;
   const list = apptsOn(date), home = place(S().homeId);
-  const cur = r.off ? (day.fromId || (list.length ? list[list.length - 1].toId : '')) : r.fromId;
+  const lastAppt = list.reduce((m, x) => (x.end >= m.end ? x : m), list[0]);
+  const lastTo = lastAppt.toId, lastEnd = lastAppt.end;
+  const cur = r.off ? (day.fromId || lastTo) : r.fromId;
+  const startV = r.off ? (day.start || lastEnd) : r.start;
+  const endV = r.off ? (day.end && day.end > startV ? day.end : returnDefaultEnd(startV, cur, home.id)) : r.end;
   const sh = openSheet({ title: t('returnEdit'), body: `
     <div class="switch"><span>${esc(t('returnDisable'))}</span><input type="checkbox" id="r-off" ${r.off ? 'checked' : ''}></div>
-    <div id="r-fields"><label class="f">${esc(t('returnFrom'))}</label><select id="r-from">${placeOptions(cur)}</select>
+    <div id="r-fields"><div class="two"><div><label class="f">${esc(t('startTime'))}</label><input id="r-start" type="time" value="${startV}"></div><div><label class="f">${esc(t('endTime'))}</label><input id="r-end" type="time" value="${endV}"></div></div>
+    <label class="f">${esc(t('returnFrom'))}</label><select id="r-from">${placeOptions(cur)}</select>
     <div class="muted" style="margin-top:4px">→ 🏠 ${esc(home.name)}</div>
     <label class="f">${esc(t('distance'))}</label><div class="row"><input id="r-km" type="text" inputmode="decimal" class="grow" value="${r.km != null ? r.km : ''}"><button class="btn sec small" id="r-recalc">${esc(t('recompute'))}</button></div>
     <div class="muted" id="r-stat" style="margin-top:3px"></div></div>`,
-    foot: [{ label: t('cancel'), cls: 'ghost', onClick: s => s.close() }, { label: t('save'), onClick: s => {
-      const off = s.$('#r-off').checked, fromId = s.$('#r-from').value;
-      const d = { off };
-      const lastTo = list.length ? list.reduce((m, x) => (x.end >= m.end ? x : m), list[0]).toId : '';
+    foot: [{ label: t('cancel'), cls: 'ghost', onClick: s => s.close() }, { label: t('save'), id: 'r-save', onClick: s => {
+      const off = s.$('#r-off').checked;
+      if (off) { DB.days[date] = Object.assign({}, day, { off: true }); if (saveDB()) { s.close(); render(); } return; }
+      const fromId = s.$('#r-from').value, st = s.$('#r-start').value, en = s.$('#r-end').value;
+      if (!st || !en || en <= st) return toast(t('endBeforeStart'), true);
+      const d = { off: false };
+      if (day.status) d.status = day.status;
+      if (day.plannedEnd) d.plannedEnd = day.plannedEnd;
       if (fromId && fromId !== lastTo) d.fromId = fromId;
       const raw = s.$('#r-km').value.trim(), v = raw === '' ? null : num(raw);
       if (v != null && kmManual) { d.km = Math.max(0, round1(v)); d.kmManual = true; } else { d.km = null; d.kmManual = false; }
-      if (!d.off && !d.fromId && d.km == null) delete DB.days[date]; else DB.days[date] = d;
+      if (st !== lastEnd) d.start = st;
+      if (d.status === 'done' || en !== returnDefaultEnd(st, fromId || lastTo, home.id)) d.end = en;
+      if (!d.fromId && d.km == null && !d.start && !d.end && !d.status) delete DB.days[date]; else DB.days[date] = d;
       if (saveDB()) { s.close(); render(); ensurePending(c => { if (c && !locked) render(); }); }
     } }] });
   const toggle = () => { sh.$('#r-fields').style.display = sh.$('#r-off').checked ? 'none' : ''; };
+  const refreshEnd = () => { if (!endTouched && sh.$('#r-start').value) sh.$('#r-end').value = returnDefaultEnd(sh.$('#r-start').value, sh.$('#r-from').value || lastTo, home.id); };
   const auto = async force => {
     if (kmManual && !force) return;
     const f = sh.$('#r-from').value, st = sh.$('#r-stat'), inp = sh.$('#r-km'); const my = ++tok;
     if (!f) { inp.value = ''; return; }
-    const c = force ? null : cachedKm(f, home.id); if (c != null) { inp.value = c; st.textContent = t('distanceAuto'); return; }
+    const c = force ? null : cachedKm(f, home.id); if (c != null) { inp.value = c; st.textContent = t('distanceAuto'); refreshEnd(); return; }
     if (f !== home.id && !(hasCoords(place(f)) && hasCoords(home))) { inp.value = ''; st.textContent = t('noCoords'); return; }
     st.textContent = t('computing');
-    try { const km = await routeKm(f, home.id, force); if (my !== tok) return; kmManual = false; inp.value = km; st.textContent = t('distanceAuto'); }
+    try { const km = await routeKm(f, home.id, force); if (my !== tok) return; kmManual = false; inp.value = km; st.textContent = t('distanceAuto'); refreshEnd(); }
     catch (e) { if (my !== tok) return; st.textContent = apiMessage(e); }
   };
   sh.$('#r-off').onchange = toggle; toggle();
-  sh.$('#r-from').onchange = () => { kmManual = false; auto(); };
+  sh.$('#r-start').oninput = () => refreshEnd();
+  sh.$('#r-end').oninput = () => { endTouched = true; };
+  sh.$('#r-from').onchange = () => { kmManual = false; auto(); refreshEnd(); };
   sh.$('#r-recalc').onclick = () => { kmManual = false; auto(true); };
   sh.$('#r-km').oninput = e => { kmManual = e.target.value.trim() !== ''; sh.$('#r-stat').textContent = kmManual ? t('distanceManual') : ''; };
   sh.$('#r-stat').textContent = r.km == null ? t('distanceUnknown') : (r.manual ? t('distanceManual') : t('distanceAuto'));
@@ -459,7 +489,7 @@ function viewRoutes() {
   if (!r.trips.length) return h + `<div class="card muted" style="text-align:center">${esc(t('noTrips'))}</div>`;
   const monthly = P === 'year' || (P === 'range' && dayList(r.from, r.to).length > 92);
   if (P === 'day') {
-    h += `<div class="card" style="padding:4px 12px">${r.trips.map(x => `<div class="list-row" data-act="barjump" data-key="${x.date}"><div class="grow"><b>${x.kind === 'return' ? '🏠 ' + esc(t('tripReturn')) : esc(x.start + ' – ' + x.end)}</b><div class="muted">${esc(x.fromName)} → ${esc(x.toName)}</div></div><span class="km">${x.km == null ? '—' : fmtKm(x.km) + ' km'}</span></div>`).join('')}</div>`;
+    h += `<div class="card" style="padding:4px 12px">${r.trips.map(x => `<div class="list-row" data-act="barjump" data-key="${x.date}"><div class="grow"><b>${x.kind === 'return' ? '🏠 ' + esc(t('tripReturn')) + ' · ' : ''}${esc(x.start + ' – ' + x.end)}</b><div class="muted">${esc(x.fromName)} → ${esc(x.toName)}</div></div><span class="km">${x.km == null ? '—' : fmtKm(x.km) + ' km'}</span></div>`).join('')}</div>`;
   } else if (monthly) {
     const ms = monthList(r.from, r.to);
     h += `<div class="card">${barsHtml(ms.map(m => ({ key: m, km: (r.byMonth[m] || { km: 0 }).km, label: t('monthNames')[+m.slice(5) - 1].slice(0, 3), title: m + ' : ' + fmtKm((r.byMonth[m] || { km: 0 }).km) + ' km' })))}</div>`;
@@ -473,7 +503,7 @@ function viewRoutes() {
 }
 function reportRows(r) {
   const rate = r.rate;
-  return r.trips.map(x => ({ date: x.date, start: x.kind === 'return' ? '' : x.start, end: x.kind === 'return' ? '' : x.end, type: x.kind === 'return' ? t('typeReturn') : t('typeAppt'),
+  return r.trips.map(x => ({ date: x.date, start: x.start, end: x.end, type: x.kind === 'return' ? t('typeReturn') : t('typeAppt'),
     title: x.title || '', from: x.fromName, to: x.toName, km: x.km, cost: x.km != null && rate ? x.km * rate : null }));
 }
 function exportXlsx() {
@@ -577,7 +607,7 @@ function openChangePin() {
 }
 function backupObject() {
   const st = Object.assign({}, S()); delete st.apiKey;
-  return { app: 'agenda-trajets', v: 1, exportedAt: new Date().toISOString(), data: { places: DB.places, appts: DB.appts, days: DB.days, routes: DB.routes, settings: st } };
+  return { app: 'agenda-trajets', v: 1, exportedAt: new Date().toISOString(), data: { places: DB.places, appts: DB.appts, days: DB.days, routes: DB.routes, durs: DB.durs, settings: st } };
 }
 async function doBackup(share) {
   let obj = backupObject(); const pwd = UI.bkpwd;
@@ -595,7 +625,7 @@ async function restoreFrom(file) {
   if (!obj || obj.app !== 'agenda-trajets' || !obj.data || !Array.isArray(obj.data.appts)) return toast(t('restoreBad'), true);
   if (!confirm(t('restoreAsk'))) return;
   const key = S().apiKey, d = obj.data, def = defaultDB();
-  DB.places = d.places || []; DB.appts = d.appts || []; DB.days = d.days || {}; DB.routes = d.routes || {};
+  DB.places = d.places || []; DB.appts = d.appts || []; DB.days = d.days || {}; DB.routes = d.routes || {}; DB.durs = d.durs || {};
   DB.settings = Object.assign(def.settings, d.settings || {}, { apiKey: key });
   if (saveDB()) { toast(t('restoreOk')); applyLang(); render(); }
 }
@@ -620,6 +650,8 @@ view.addEventListener('click', async e => {
     case 'cancel': { const a = DB.appts.find(x => x.id === id); if (a) { a.status = 'cancelled'; saveDB(); render(); } return; }
     case 'restore': { const a = DB.appts.find(x => x.id === id); if (a) { a.status = a.plannedEnd ? 'done' : 'planned'; saveDB(); render(); ensurePending(c => { if (c && !locked) render(); }); } return; }
     case 'returnedit': return openReturnEdit(UI.date);
+    case 'rfinish': return openFinishReturn(UI.date);
+    case 'returncancel': { DB.days[UI.date] = Object.assign({}, DB.days[UI.date], { off: true }); saveDB(); render(); return; }
     case 'returnrestore': { const d = DB.days[UI.date]; if (d) { d.off = false; saveDB(); render(); ensurePending(c => { if (c && !locked) render(); }); } return; }
     case 'gosettings': return setTab('settings');
     case 'gobackup': setTab('settings'); setTimeout(() => { const c = $('#backupCard'); if (c) c.scrollIntoView(); }, 50); return;

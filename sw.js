@@ -1,4 +1,4 @@
-const CACHE = 'trajets-ors-v1';
+const CACHE = 'trajets-ors-v2';
 const FILES = ['./', './index.html', './style.css', './leaflet.js', './leaflet.css', './i18n.js', './export.js', './core.js', './app.js', './manifest.json',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
@@ -11,9 +11,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return; // API and tile servers: never cached
-  e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(r => {
-    const copy = r.clone();
-    caches.open(CACHE).then(c => c.put(e.request, copy));
-    return r;
-  })));
+  // Serve from cache at once, refresh the cache in the background: updated files arrive on the next opening.
+  e.respondWith(caches.match(e.request).then(hit => {
+    const net = fetch(e.request).then(r => {
+      if (r && r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
+      return r;
+    }).catch(() => hit);
+    return hit || net;
+  }));
 });

@@ -7,7 +7,7 @@ carte via OpenStreetMap. Gratuit, sans carte bancaire.
    Ce dossier contient uniquement l'application, aucune donnée.
    - GitHub : créez un dépôt, Add file > Upload files, glissez TOUS LES FICHIERS du dossier dézippé
      (il n'y a aucun sous-dossier), attendez la fin du chargement, puis Commit changes.
-     Il y a 17 fichiers environ ; vérifiez qu'ils apparaissent tous dans le dépôt, dont leaflet.js et les icônes .png.
+     Il y a 18 fichiers (dont ce guide en français et README.txt en anglais) ; vérifiez qu'ils apparaissent tous dans le dépôt, dont leaflet.js et les icônes .png.
    - Settings > Pages > Deploy from a branch > main / (root). Adresse : https://VOTRE-NOM.github.io/NOM-DU-DEPOT/
    Android (Chrome) : menu ⋮ > "Installer l'application".  iPhone (Safari) : Partager > "Sur l'écran d'accueil".
    Au premier lancement : choisissez un code PIN (4 à 8 chiffres).
@@ -33,7 +33,9 @@ carte via OpenStreetMap. Gratuit, sans carte bancaire.
                  "33.89, 35.50"). Définissez votre domicile. Les liens courts maps.app.goo.gl ne sont pas lisibles.
    Agenda      : "+" pour un RDV (date, début, fin, départ, arrivée). La distance (route en voiture) est calculée
                  automatiquement et peut être corrigée à la main. "Terminer" met à jour l'heure de fin réelle.
-                 Un seul retour à la maison par jour, depuis la dernière arrivée ; il se modifie ou se désactive.
+                 Un seul retour à la maison par jour, depuis la dernière arrivée. Il fonctionne comme un RDV :
+                 heure de début (fin du dernier RDV) et de fin (début + durée estimée du trajet, 30 min si inconnue),
+                 Terminer, Modifier (heures, départ, distance), Itinéraire et Annuler le retour.
    Parcours    : km par jour, semaine, mois, année ou période libre, avec coût (km x montant par km),
                  export Excel et PDF.
    Hors ligne  : l'agenda et les lieux fonctionnent sans internet (la carte et la recherche demandent internet).
@@ -50,7 +52,7 @@ carte via OpenStreetMap. Gratuit, sans carte bancaire.
    La clé et le PIN ne sont jamais inclus dans la sauvegarde.
 
 5) MISE À JOUR
-   Remplacez les fichiers sur GitHub, puis rouvrez l'application deux fois (la 2e ouverture charge la
-   nouvelle version). Les données sont conservées.
+   Remplacez les fichiers sur GitHub (tous, y compris sw.js), puis rouvrez l'application deux fois :
+   la 1re ouverture télécharge la nouvelle version, la 2e l'affiche. Les données sont conservées.
 
 Crédits : données © contributeurs OpenStreetMap ; services OpenRouteService / HeiGIT ; carte Leaflet (licence BSD-2, LEAFLET-LICENSE.txt).
